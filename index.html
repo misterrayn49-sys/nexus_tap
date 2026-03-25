@@ -3,111 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Nexus Tap Pro</title>
+    <title>Nexus Tap Online</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            background-color: #0d1117;
-            color: white;
-            font-family: 'Arial', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden;
-            user-select: none;
-            touch-action: manipulation;
+        body { background-color: #0d1117; color: white; font-family: 'Arial', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .tab-content { display: none; flex-direction: column; align-items: center; padding-top: 20px; flex: 1; overflow-y: auto; padding-bottom: 80px; }
+        .active-tab { display: flex; }
+        
+        #balance { font-size: 48px; font-weight: bold; color: #f3ba2f; margin: 10px 0; text-shadow: 0 0 20px rgba(243, 186, 47, 0.4); }
+        
+        #coin-container { perspective: 1000px; margin: 20px 0; cursor: pointer; }
+        #coin { 
+            width: 220px; height: 220px; background: radial-gradient(circle, #f3ba2f 0%, #b3860f 100%); 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            font-size: 90px; border: 10px solid #8e6a0d; transition: transform 0.1s;
+            box-shadow: 0 0 40px rgba(243, 186, 47, 0.3);
         }
-        #balance {
-            font-size: 42px;
-            font-weight: bold;
-            margin-top: 20px;
-            color: #f3ba2f;
-            text-shadow: 0 0 15px rgba(243, 186, 47, 0.5);
-        }
-        .coin-container {
-            position: relative;
-            margin: 40px 0;
-            cursor: pointer;
-            transition: transform 0.05s;
-        }
-        .coin-container:active {
-            transform: scale(0.92);
-        }
-        #coin {
-            width: 200px;
-            height: 200px;
-            background: linear-gradient(145deg, #f3ba2f, #d4a017);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 80px;
-            box-shadow: 0 0 30px rgba(243, 186, 47, 0.4);
-            border: 8px solid #b3860f;
-        }
-        .stats-container {
-            display: flex;
-            gap: 20px;
-            background: rgba(255,255,255,0.05);
-            padding: 15px 30px;
-            border-radius: 20px;
-            margin-bottom: 20px;
-        }
-        .stat-item { text-align: center; }
-        .stat-label { font-size: 12px; color: #888; display: block; }
-        .stat-value { font-size: 18px; font-weight: bold; }
 
-        .upgrades { display: flex; gap: 10px; margin-top: 20px; }
-        button {
-            background: #21262d;
+        .energy-info { font-size: 16px; color: #f3ba2f; margin-top: 10px; }
+        .energy-bar-bg { width: 80%; height: 12px; background: #30363d; border-radius: 6px; overflow: hidden; margin-top: 5px; }
+        #energy-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #f3ba2f, #ffeb3b); transition: width 0.2s; }
+
+        .leader-item { 
+            width: 90%; background: #21262d; margin: 5px 0; padding: 15px; 
+            border-radius: 12px; display: flex; justify-content: space-between; align-items: center;
             border: 1px solid #30363d;
-            color: #58a6ff;
-            padding: 10px 15px;
-            border-radius: 10px;
-            font-weight: bold;
-            cursor: pointer;
         }
-        button:active { background: #30363d; }
+        .rank { color: #f3ba2f; font-weight: bold; font-size: 18px; margin-right: 10px; }
 
-        .floating-text {
-            position: absolute;
-            color: #f3ba2f;
-            font-size: 28px;
-            font-weight: bold;
-            pointer-events: none;
-            animation: moveUp 0.6s ease-out forwards;
+        .nav-bar { 
+            position: fixed; bottom: 0; width: 100%; display: flex; 
+            background: #161b22; border-top: 2px solid #30363d; padding: 15px 0; 
         }
-        @keyframes moveUp {
-            0% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-120px); }
-        }
+        .nav-item { flex: 1; text-align: center; color: #888; font-size: 14px; transition: 0.3s; }
+        .nav-item.active { color: #f3ba2f; font-weight: bold; transform: translateY(-3px); }
+
+        .floating-text { position: absolute; color: white; font-size: 32px; font-weight: bold; pointer-events: none; animation: moveUp 0.6s ease-out forwards; }
+        @keyframes moveUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-120px); } }
     </style>
 </head>
 <body>
 
-    <div id="balance">0</div>
-    
-    <div class="stats-container">
-        <div class="stat-item">
-            <span class="stat-label">За тап</span>
-            <span id="tap-val" class="stat-value">+1</span>
+    <div id="game-tab" class="tab-content active-tab">
+        <div id="balance">0</div>
+        <div id="coin-container" onclick="handleTap(event)">
+            <div id="coin">N</div>
         </div>
-        <div class="stat-item">
-            <span class="stat-label">Пасив/сек</span>
-            <span id="passive-val" class="stat-value">0</span>
+        <div class="energy-info">⚡ <span id="en-num">1000</span> / 1000</div>
+        <div class="energy-bar-bg"><div id="energy-bar"></div></div>
+    </div>
+
+    <div id="leader-tab" class="tab-content">
+        <h2 style="color: #f3ba2f;">Світовий Топ 🏆</h2>
+        <div id="leaderboard-list" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+            Завантаження списку...
         </div>
     </div>
 
-    <div class="coin-container" id="coin-btn">
-        <div id="coin">N</div>
-    </div>
-
-    <div class="upgrades">
-        <button onclick="buyUpgrade('tap')">Upgrade Tap</button>
-        <button onclick="buyUpgrade('passive')">Mining</button>
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="showTab('game-tab', this)">🎮 Грати</div>
+        <div class="nav-item" onclick="showTab('leader-tab', this)">🏆 Лідери</div>
     </div>
 
     <audio id="click-sound" src="https://www.soundjay.com/buttons/sounds/button-37a.mp3" preload="auto"></audio>
@@ -116,77 +71,110 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Початковий стан для всіх однаковий
+        // Твоє посилання
+        const FIREBASE_URL = "https://nexus-tap-default-rtdb.firebaseio.com/.json";
+
+        const user = tg.initDataUnsafe?.user || { id: "test_user", first_name: "Гравець" };
+        
         let state = JSON.parse(localStorage.getItem('nexus_save')) || {
-            balance: 0,
-            tapPower: 1,
-            passiveIncome: 0,
-            tapCost: 100,
-            passiveCost: 500
+            balance: 0, tapPower: 1, energy: 1000, maxEnergy: 1000
         };
 
-        const clickSound = document.getElementById('click-sound');
+        function showTab(tabId, el) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-tab'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active-tab');
+            el.classList.add('active');
+            if(tabId === 'leader-tab') updateLeaderboard();
+        }
 
         function updateUI() {
             document.getElementById('balance').innerText = Math.floor(state.balance).toLocaleString();
-            document.getElementById('tap-val').innerText = '+' + state.tapPower;
-            document.getElementById('passive-val').innerText = state.passiveIncome;
+            document.getElementById('en-num').innerText = Math.floor(state.energy);
+            document.getElementById('energy-bar').style.width = (state.energy/state.maxEnergy*100) + '%';
             localStorage.setItem('nexus_save', JSON.stringify(state));
         }
 
-        function handleTap(e) {
-            state.balance += state.tapPower;
-            
-            // Звук
-            clickSound.currentTime = 0;
-            clickSound.play().catch(() => {}); 
+        // Синхронізація з сервером (раз на 15 тапів, щоб не перевантажувати)
+        let tapCounter = 0;
+        async function syncWithFirebase() {
+            const data = { name: user.first_name, score: state.balance };
+            try {
+                await fetch(`https://nexus-tap-default-rtdb.firebaseio.com/users/${user.id}.json`, {
+                    method: 'PUT',
+                    body: JSON.stringify(data)
+                });
+            } catch (e) { console.error("Sync error"); }
+        }
 
-            // Анімація цифр
+        async function updateLeaderboard() {
+            const list = document.getElementById('leaderboard-list');
+            try {
+                const response = await fetch(FIREBASE_URL);
+                const data = await response.json();
+                list.innerHTML = '';
+                if (data && data.users) {
+                    const sorted = Object.values(data.users).sort((a, b) => b.score - a.score).slice(0, 15);
+                    sorted.forEach((player, index) => {
+                        const isMe = player.name === user.first_name ? "border: 1px solid #f3ba2f;" : "";
+                        list.innerHTML += `
+                            <div class="leader-item" style="${isMe}">
+                                <span><span class="rank">#${index+1}</span> ${player.name}</span>
+                                <span style="font-weight: bold;">${player.score.toLocaleString()}</span>
+                            </div>`;
+                    });
+                }
+            } catch (e) { list.innerText = "Помилка завантаження"; }
+        }
+
+        function handleTap(e) {
+            if (state.energy < state.tapPower) {
+                tg.HapticFeedback.notificationOccurred('error');
+                return;
+            }
+            
+            state.balance += state.tapPower;
+            state.energy -= state.tapPower;
+            tapCounter++;
+
+            // Звук
+            const snd = document.getElementById('click-sound');
+            snd.currentTime = 0;
+            snd.play().catch(()=>{});
+
+            // Анімація цифри
             const text = document.createElement('div');
             text.className = 'floating-text';
             text.innerText = `+${state.tapPower}`;
-            
-            const x = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-            const y = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-            
-            text.style.left = `${x - 20}px`;
-            text.style.top = `${y - 40}px`;
+            text.style.left = `${e.clientX - 20}px`;
+            text.style.top = `${e.clientY - 40}px`;
             document.body.appendChild(text);
             setTimeout(() => text.remove(), 600);
-            
+
+            // 3D ефект монети
+            const coin = document.getElementById('coin');
+            coin.style.transform = 'scale(0.95) rotateX(10deg)';
+            setTimeout(() => coin.style.transform = 'scale(1) rotateX(0)', 100);
+
+            if (tapCounter >= 15) {
+                syncWithFirebase();
+                tapCounter = 0;
+            }
+
             updateUI();
             tg.HapticFeedback.impactOccurred('light');
         }
 
-        const coinBtn = document.getElementById('coin-btn');
-        coinBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleTap(e); });
-        coinBtn.addEventListener('mousedown', (e) => { handleTap(e); });
-
-        function buyUpgrade(type) {
-            if (type === 'tap' && state.balance >= state.tapCost) {
-                state.balance -= state.tapCost;
-                state.tapPower += 1;
-                state.tapCost = Math.floor(state.tapCost * 2);
-                tg.HapticFeedback.notificationOccurred('success');
-            } else if (type === 'passive' && state.balance >= state.passiveCost) {
-                state.balance -= state.passiveCost;
-                state.passiveIncome += 1;
-                state.passiveCost = Math.floor(state.passiveCost * 2.5);
-                tg.HapticFeedback.notificationOccurred('success');
-            } else {
-                tg.HapticFeedback.notificationOccurred('error');
-            }
-            updateUI();
-        }
-
+        // Відновлення енергії (2 одиниці на сек)
         setInterval(() => {
-            if (state.passiveIncome > 0) {
-                state.balance += state.passiveIncome / 10;
+            if (state.energy < state.maxEnergy) {
+                state.energy = Math.min(state.maxEnergy, state.energy + 2);
                 updateUI();
             }
-        }, 100);
+        }, 1000);
 
         updateUI();
+        syncWithFirebase(); // Початкова синхронізація
     </script>
 </body>
 </html>
