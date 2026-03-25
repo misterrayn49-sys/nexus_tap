@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEXUS NETWORK</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --neon: #00f2ff; --p: #7000ff; --bg: #05060a; --card: #11141b; --green: #39ff14; --gold: #f3ba2f; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; user-select: none; }
+        
+        body { 
+            background: var(--bg); color: white; margin: 0; height: 100vh; 
+            font-family: 'Inter', sans-serif; overflow: hidden; display: flex; flex-direction: column;
+        }
+
+        /* LOADING SCREEN */
+        #loader { 
+            position: fixed; inset: 0; background: var(--bg); z-index: 999; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .loader-bar { width: 200px; height: 4px; background: #222; border-radius: 2px; margin-top: 20px; overflow: hidden; }
+        .loader-fill { height: 100%; background: var(--neon); width: 0%; transition: 0.5s; }
+
+        /* HEADER */
+        header { padding: 12px 20px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
+        .lvl-pill { background: var(--card); border: 1px solid #333; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; color: var(--neon); }
+
+        /* MAIN STATS */
+        .main-balance { text-align: center; padding: 25px 0; }
+        .main-balance h1 { font-family: 'Orbitron', sans-serif; font-size: 48px; margin: 0; display: flex; align-items: center; justify-content: center; gap: 12px; }
+        .pph-badge { font-size: 13px; color: var(--green); background: rgba(57,255,20,0.1); padding: 5px 15px; border-radius: 20px; margin-top: 8px; display: inline-block; }
+
+        /* SCREENS */
+        .screen { display: none; flex: 1; overflow-y: auto; padding: 10px 20px 100px; animation: fadeIn 0.3s ease; }
+        .active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* CLICKER */
+        .tap-circle { 
+            width: 260px; height: 260px; margin: 30px auto; border-radius: 50%;
+            background: radial-gradient(circle, var(--p) 0%, transparent 70%), var(--card);
+            border: 8px solid #1e232d; position: relative; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: 0.1s;
+            box-shadow: 0 0 40px rgba(112,0,255,0.2);
+        }
+        .tap-circle:active { transform: scale(0.95); box-shadow: 0 0 60px var(--neon); }
+        .tap-circle img { width: 70%; pointer-events: none; }
+
+        .energy-footer { width: 100%; max-width: 320px; margin: 0 auto; }
+        .energy-info { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; font-weight: bold; }
+        .bar-bg { height: 12px; background: #1a1e26; border-radius: 6px; overflow: hidden; border: 1px solid #333; }
+        .bar-fill { height: 100%; background: linear-gradient(90deg, var(--neon), var(--p)); transition: 0.2s; }
+
+        /* CARDS & LISTS */
+        .card { background: var(--card); border-radius: 20px; padding: 15px; margin-bottom: 12px; border: 1px solid #222; display: flex; align-items: center; gap: 15px; }
+        .card-icon { width: 50px; height: 50px; background: #1a1e26; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .card-content { flex: 1; }
+        .card-content b { display: block; font-size: 14px; }
+        .card-content small { color: var(--green); font-weight: bold; font-size: 12px; }
+        .buy-btn { background: var(--p); color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 800; font-size: 12px; }
+        .buy-btn:disabled { opacity: 0.3; }
+
+        /* DAILY REWARDS */
+        .daily-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 15px; }
+        .day-box { background: var(--card); border: 1px solid #333; padding: 10px; border-radius: 12px; text-align: center; font-size: 10px; }
+        .day-box.claimed { border-color: var(--green); color: var(--green); }
+
+        /* NAVIGATION */
+        nav { position: fixed; bottom: 0; width: 100%; height: 85px; background: rgba(12,14,20,0.95); backdrop-filter: blur(20px); display: flex; border-top: 1px solid #222; padding-bottom: 20px; z-index: 100; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #555; font-size: 11px; font-weight: bold; }
+        .nav-item.active { color: var(--neon); }
+        .nav-item i { font-size: 24px; margin-bottom: 4px; }
+
+        /* POPUP TAP */
+        .pop { position: absolute; color: white; font-weight: 900; font-size: 38px; animation: fly 0.6s forwards; pointer-events: none; text-shadow: 0 0 10px var(--neon); }
+        @keyframes fly { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-150px); } }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <h2 style="font-family: 'Orbitron'; letter-spacing: 4px;">NEXUS</h2>
+        <div class="loader-bar"><div class="loader-fill" id="load-f"></div></div>
+        <p style="font-size: 10px; margin-top: 10px; color: #555;">CONNECTING TO MAINNET...</p>
+    </div>
+
+    <header>
+        <div id="user-display">HACKER_1337</div>
+        <div class="lvl-pill">RANK: <span id="ui-rank">SILVER</span></div>
+    </header>
+
+    <div class="main-balance">
+        <h1 id="balance">0</h1>
+        <div class="pph-badge">Profit/hr: +$<span id="ui-pph">0</span></div>
+    </div>
+
+    <div id="scr-main" class="screen active">
+        <div class="tap-circle" id="tap-btn">
+            <img src="https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Nexus&backgroundColor=transparent" alt="Core">
+        </div>
+        <div class="energy-footer">
+            <div class="energy-info">
+                <span>⚡ ENERGY</span>
+                <span id="ui-energy">1000 / 1000</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" id="e-fill"></div></div>
+        </div>
+    </div>
+
+    <div id="scr-mine" class="screen">
+        <div class="daily-grid" id="daily-rewards">
+            </div>
+        <h3 style="margin-top: 25px;">Upgrade System</h3>
+        <div id="shop-container"></div>
+    </div>
+
+    <div id="scr-friends" class="screen">
+        <div style="background:var(--p); padding:20px; border-radius:24px; text-align:center;">
+            <h2>Invite Friends</h2>
+            <p style="font-size:13px; opacity:0.8;">Get 10% of their earnings + 50,000 coins instantly!</p>
+            <button class="buy-btn" style="background:white; color:var(--p); width:100%; padding:15px; font-size:16px;" onclick="invite()">Send Invite Link</button>
+        </div>
+        <h3 style="margin-top:30px;">Referral List (0)</h3>
+        <p style="color:#555; text-align:center;">No active referrals found.</p>
+    </div>
+
+    <div id="scr-airdrop" class="screen">
+        <div style="text-align:center; padding: 20px 0;">
+            <div style="font-size: 50px;">💎</div>
+            <h2>Nexus Airdrop</h2>
+            <p style="color:#888;">Complete tasks to qualify for the $NXS distribution.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">👛</div>
+            <div class="card-content"><b>Connect TON Wallet</b><small>Mandatory</small></div>
+            <button class="buy-btn" onclick="tg.showConfirm('Start Wallet Connection?')">Link</button>
+        </div>
+        <div class="card">
+            <div class="card-icon">📱</div>
+            <div class="card-content"><b>Follow Community</b><small>+100,000</small></div>
+            <button class="buy-btn" onclick="claimTask(this, 100000)">Claim</button>
+        </div>
+    </div>
+
+    <nav>
+        <div class="nav-item active" onclick="tab('scr-main', this)"><i>🏠</i>Main</div>
+        <div class="nav-item" onclick="tab('scr-mine', this)"><i>⛏️</i>Mine</div>
+        <div class="nav-item" onclick="tab('scr-friends', this)"><i>👥</i>Friends</div>
+        <div class="nav-item" onclick="tab('scr-airdrop', this)"><i>🪙</i>Airdrop</div>
+    </nav>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // 1. GAME STATE (Proxy for Auto-Save)
+        const state = new Proxy({
+            coins: parseFloat(localStorage.getItem('nx_coins')) || 0,
+            pph: parseFloat(localStorage.getItem('nx_pph')) || 0,
+            energy: parseFloat(localStorage.getItem('nx_energy')) || 1000,
+            maxEnergy: 1000,
+            tapPower: 5
+        }, {
+            set(target, key, value) {
+                target[key] = value;
+                localStorage.setItem('nx_' + key, value);
+                updateUI();
+                return true;
+            }
+        });
+
+        const upgrades = [
+            { id: 1, name: "Neural Node", cost: 500, pph: 25, icon: "🧠" },
+            { id: 2, name: "Cloud Server", cost: 2500, pph: 140, icon: "☁️" },
+            { id: 3, name: "Quantum Rig", cost: 12000, pph: 850, icon: "⚡" },
+            { id: 4, name: "Mainframe", cost: 50000, pph: 4200, icon: "🏢" }
+        ];
+
+        // 2. INITIALIZATION
+        window.onload = () => {
+            let load = 0;
+            const int = setInterval(() => {
+                load += 20;
+                document.getElementById('load-f').style.width = load + "%";
+                if(load >= 100) {
+                    clearInterval(int);
+                    document.getElementById('loader').style.display = 'none';
+                }
+            }, 200);
+
+            renderShop();
+            renderDaily();
+            updateUI();
+        };
+
+        // 3. CORE LOGIC
+        function updateUI() {
+            document.getElementById('balance').innerText = Math.floor(state.coins).toLocaleString();
+            document.getElementById('ui-pph').innerText = state.pph.toLocaleString();
+            document.getElementById('ui-energy').innerText = `${Math.floor(state.energy)} / ${state.maxEnergy}`;
+            document.getElementById('e-fill').style.width = (state.energy / state.maxEnergy * 100) + "%";
+            
+            // Динамічний ранг
+            const ranks = ["BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND"];
+            const rankIdx = Math.min(Math.floor(state.coins / 50000), 4);
+            document.getElementById('ui-rank').innerText = ranks[rankIdx];
+        }
+
+        document.getElementById('tap-btn').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (state.energy < state.tapPower) {
+                tg.HapticFeedback.notificationOccurred('error');
+                return;
+            }
+
+            state.coins += state.tapPower;
+            state.energy -= state.tapPower;
+            tg.HapticFeedback.impactOccurred('medium');
+
+            const t = e.touches[0];
+            const p = document.createElement('div');
+            p.innerText = "+" + state.tapPower; p.className = 'pop';
+            p.style.left = t.pageX + 'px'; p.style.top = t.pageY + 'px';
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 600);
+        });
+
+        function renderShop() {
+            const cont = document.getElementById('shop-container');
+            cont.innerHTML = upgrades.map(u => {
+                const lvl = localStorage.getItem('lvl_' + u.id) || 0;
+                const cost = Math.floor(u.cost * Math.pow(1.5, lvl));
+                return `
+                    <div class="card">
+                        <div class="card-icon">${u.icon}</div>
+                        <div class="card-content">
+                            <b>${u.name} (Lvl ${lvl})</b>
+                            <small>+${u.pph}/hr</small>
+                        </div>
+                        <button class="buy-btn" onclick="buy(${u.id}, ${cost}, ${u.pph})">${cost.toLocaleString()}</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function buy(id, cost, pph) {
+            if (state.coins >= cost) {
+                state.coins -= cost;
+                state.pph += pph;
+                const lvl = parseInt(localStorage.getItem('lvl_' + id) || 0) + 1;
+                localStorage.setItem('lvl_' + id, lvl);
+                renderShop();
+                tg.HapticFeedback.notificationOccurred('success');
+            } else {
+                tg.showAlert("Not enough coins!");
+            }
+        }
+
+        function renderDaily() {
+            const grid = document.getElementById('daily-rewards');
+            let html = '';
+            for(let i=1; i<=8; i++) {
+                html += `<div class="day-box">Day ${i}<br><b>${i*10}k</b></div>`;
+            }
+            grid.innerHTML = html;
+        }
+
+        function tab(id, el) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            el.classList.add('active');
+            tg.HapticFeedback.impactOccurred('light');
+        }
+
+        function invite() {
+            const url = "https://t.me/share/url?url=t.me/nexus_bot?start=user123&text=Join Nexus and earn coins!";
+            tg.openTelegramLink(url);
+        }
+
+        function claimTask(btn, amt) {
+            state.coins += amt;
+            btn.innerText = "✅";
+            btn.disabled = true;
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+
+        // 4. GAME LOOP (PPH & Energy Recovery)
+        setInterval(() => {
+            if (state.pph > 0) state.coins += (state.pph / 3600);
+            if (state.energy < state.maxEnergy) state.energy = Math.min(state.maxEnergy, state.energy + 1.5);
+        }, 1000);
+
+    </script>
+</body>
+</html>
